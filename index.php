@@ -1,56 +1,123 @@
 <?php
-//В этот файл записываем исходный текст  
-$source_text = 'text.txt';  
-//Словарь, в который записываются слова, идущей после слов  
-$dictionary = array();  
-function load()  
-{  
-    global $dictionary,$source_text;  
-    //Читаем исходный файл  
-    $str = file_get_contents($source_text);  
-    //Превращаем текст в одну строку  
-    $str = preg_replace("#[\r\n]#","",$str);  
-    //Выделяем все слова из строки (выражение в кавычках или в скобках считается одним словом) 
-    preg_match_all("#((\"[^\"]+\")|(\([^\)]+\))|([^\(\)\"'\s]+))(\s+|\z)#",$str,$parts);  
-    $words = $parts[1];  
-    $count = count($words);  
+require 'config.php';
 
-    //Заполняем словарь  
-    for( $i = 0; $i < $count; $i++ )  
-    {  
-        if( $i > 0 )  
-        {  
-            if( !in_array($words[$i],$dictionary[$prev_word]) )  
-                $dictionary[$prev_word][] = $words[$i];  
+class Fake {
+    private $config;
+    private $source_text = 'text.txt';  
+    private $dictionary = array();  
+    private $last = array();
+    private $largest_word;
+
+    function __construct() {
+        $this->config = new Config();
+        $this->sentence_split();
+        array_map(array($this, 'check_single_words'), $this->last);
+        $this->dictionary_closing();
+        $this->set_largest_word();
+    }
+
+    function sentence_split() {  
+        $str = file_get_contents($this->source_text);  
+        $str = mb_convert_case($str, MB_CASE_LOWER, "UTF-8");
+        $str = preg_replace('~[^\p{L} ,.!?-]++~u', '', $str);
+        $str = preg_split('/[\.!?]+/u', $str);
+        foreach ($str as $st) {
+            $res = preg_split('/\b(?=\p{P} )|\b /u', trim($st));
+            $this->add_to_dictionary($res);
+        }
+    }
+
+    function check_single_words($key) {
+        if (count($this->dictionary[trim($key)]) > 0) {
+            $this->last = array_diff($this->last, array($key));
+        }
+    }
+
+    function dictionary_closing() {
+        $keys = array_keys($this->dictionary);
+        $this->last = array_values($this->last);
+        $this->set_largest_word();
+        for ($i = 0; $i < count($this->last) ; $i++) {
+            //$this->dictionary[$this->last[$i]][] = $this->last[$i + 1];
+            $this->dictionary[$this->last[$i]][] = $this->largest_word;
+        }
+        //$this->dictionary[end($this->last)] = array($this->largest_word);
+    }
+
+    function add_to_dictionary($arr) {
+        if (trim(end($arr)) && !in_array(end($arr), $this->last)) {
+            $this->last[] = trim(end($arr));
+        }
+
+        for ($i = 0; $i < count($arr); $i++) {
+            if (trim($arr[$i]) && !array_key_exists(trim($arr[$i]), $this->dictionary)) {
+                $this->dictionary[trim($arr[$i])] = array();
+            }
+            if (array_key_exists($i + 1, $arr) && trim($arr[$i + 1])) {
+                $this->dictionary[trim($arr[$i])][] = trim($arr[$i + 1]);
+            }
+        }
+    }
+
+    function set_largest_word() {
+        $count = 0;
+        $result_key = null;
+        foreach ($this->dictionary as $key => $value) {
+            if (count($value) > $count) {
+                $count = count($value);
+                $result_key = $key;
+            }
+        }
+        $this->largest_word = $result_key;
+    }
+
+            
+
+    function text($count) {  
+        $words = array_keys($this->dictionary);  
+        $text ='';  
+
+        $first_upper = true;
+        while (true) {
+            $words_in_sentence = rand($this->config->text_words_in_sentence[0], $this->config->text_words_in_sentence[1]);
+            $word = $words[rand(0, count($this->dictionary) - 1)];  
+            for ($i = 0; $i < $words_in_sentence; $i++) {
+                if($first_upper) {
+                    $word_append = first_to_upper($word);
+                    $first_upper = false;
+                } elseif ($word[0] == ',') {
+                    $word_append = $word;
+                } else {
+                    $word_append = ' ' . $word;
+                }
+                $text .= $word_append;  
+                if (strlen($text) >= $count && strlen($word) > 3) {
+                    $text .= ".";
+                    return $text;
+                }
+                if($i == $words_in_sentence - 1 && strlen($word) <= 3) {
+                    $i = $i - 1;
+                }
+                $word = $this->dictionary[$word][rand(0,count($this->dictionary[$word])-1)];  
+            }
+            $text .= '. ';
+            $first_upper = true;
         }  
-        $prev_word = $words[$i];  
-        if( empty($dictionary[$prev_word]) )  
-            $dictionary[$prev_word] = array();  
     }  
-    // Закольцовка
-    $dictionary[$words[$i - 1]] = $dictionary[$words[0]];
-    // Чистка дублей
-    $dictionary = array_map('array_unique',$dictionary);
-}  
+}
 
-//Функция для генерации текста. $count – количество слов, которое будем генерировать 
-function genText($count)  {  
-    global $dictionary;  
-echo "<pre>"; var_dump($dictionary); die();
-    $words = array_keys($dictionary);  
-    $word = $words[0];  
-    $text ='';  
-    for( $i = 0; $i < $count; $i++ )  
-    {  
-        $text .= ' '.$word;  
-        //Следующее слово - случайное слово из тех, что идут в исходном тексте за текущим словом 
-        $word = $dictionary[$word][rand(0,count($dictionary[$word])-1)];  
-    }  
-    return $text;  
-}  
+function first_to_upper($str) {
+    if (trim($str)[0] == ',') {
+        $str = substr($str, 2);
+    }
+    $str = trim($str);
+    $str = mb_strtoupper(mb_substr($str, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($str, 1, mb_strlen($str), 'UTF-8');
+    return $str;
+}
 
-load();  
-echo genText(100); 
+set_time_limit(0);
+$fake = new Fake();
+echo $fake->text(100000);
 
 
 ?>
