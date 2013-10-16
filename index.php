@@ -127,12 +127,12 @@ class Fake {
                     }
                     $text .= $word_append;  
                     $result_text .= $word_append;  
-                    if (strlen($text) >= $count && strlen($word) > 3) {
+                    if (mb_strlen($text, 'UTF-8') >= $count && mb_strlen($word, 'UTF-8') > 3) {
                         $result_text .= "."; 
                         $this->result_text = $result_text;
                         return;
                     }
-                    if($i == $words_in_sentence - 1 && strlen($word) <= 3) {
+                    if($i == $words_in_sentence - 1 && mb_strlen($word, 'UTF-8') <= 3) {
                         $i = $i - 1;
                     }
                     $word = $this->dictionary[$word][rand(0,count($this->dictionary[$word])-1)];  
