@@ -12,7 +12,8 @@ class Fake {
         $this->config = new Config();
         $this->sentence_split();
         array_map(array($this, 'check_single_words'), $this->last);
-        $this->dictionary_closing();
+        //$this->remove_all_empty_items();    // fastest, but less realistic algorithm
+        $this->dictionary_closing();      // slow, but best realistic algorithm needs to fix;
         $this->set_largest_word();
     }
 
@@ -38,10 +39,40 @@ class Fake {
         $this->last = array_values($this->last);
         $this->set_largest_word();
         for ($i = 0; $i < count($this->last) ; $i++) {
-            //$this->dictionary[$this->last[$i]][] = $this->last[$i + 1];
             $this->dictionary[$this->last[$i]][] = $this->largest_word;
         }
-        //$this->dictionary[end($this->last)] = array($this->largest_word);
+    }
+
+    function remove_all_empty_items() {
+        while (true) {
+            $empty = $this->get_empty_words();
+            if (count($empty) == 0) {
+                return;
+            }
+            foreach ($empty as $emp) {
+                $this->remove_item($emp);
+            }
+        }
+    }
+
+    function get_empty_words() {
+        $result = array();
+        foreach ($this->dictionary as $key => $dict) {
+            if (count($dict) == 0) {
+                $result[] = $key;
+            }
+        }
+        return $result;
+    }
+
+    function remove_item($item) {
+        foreach ($this->dictionary as $key => $val) {
+            if (in_array($item, $val)) {
+                $this->dictionary[$key] = array_diff($val, array($item));
+            }
+        }
+        $this->last = array_diff($this->last, array($item));
+        unset($this->dictionary[$item]);
     }
 
     function add_to_dictionary($arr) {
@@ -80,28 +111,33 @@ class Fake {
         $first_upper = true;
         while (true) {
             $words_in_sentence = rand($this->config->text_words_in_sentence[0], $this->config->text_words_in_sentence[1]);
+            $sentences_in_paragraph = rand($this->config->text_sentences_in_paragraph[0], 
+                $this->config->text_sentences_in_paragraph[1]);
             $word = $words[rand(0, count($this->dictionary) - 1)];  
-            for ($i = 0; $i < $words_in_sentence; $i++) {
-                if($first_upper) {
-                    $word_append = first_to_upper($word);
-                    $first_upper = false;
-                } elseif ($word[0] == ',') {
-                    $word_append = $word;
-                } else {
-                    $word_append = ' ' . $word;
+            for ($n = 0; $n < $sentences_in_paragraph; $n++) {
+                for ($i = 0; $i < $words_in_sentence; $i++) {
+                    if($first_upper) {
+                        $word_append = first_to_upper($word);
+                        $first_upper = false;
+                    } elseif ($word[0] == ',') {
+                        $word_append = $word;
+                    } else {
+                        $word_append = ' ' . $word;
+                    }
+                    $text .= $word_append;  
+                    if (strlen($text) >= $count && strlen($word) > 3) {
+                        $text .= ".";
+                        return $text;
+                    }
+                    if($i == $words_in_sentence - 1 && strlen($word) <= 3) {
+                        $i = $i - 1;
+                    }
+                    $word = $this->dictionary[$word][rand(0,count($this->dictionary[$word])-1)];  
                 }
-                $text .= $word_append;  
-                if (strlen($text) >= $count && strlen($word) > 3) {
-                    $text .= ".";
-                    return $text;
-                }
-                if($i == $words_in_sentence - 1 && strlen($word) <= 3) {
-                    $i = $i - 1;
-                }
-                $word = $this->dictionary[$word][rand(0,count($this->dictionary[$word])-1)];  
+                $text .= '. ';
+                $first_upper = true;
             }
-            $text .= '. ';
-            $first_upper = true;
+            $text .= '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
         }  
     }  
 }
@@ -117,7 +153,7 @@ function first_to_upper($str) {
 
 set_time_limit(0);
 $fake = new Fake();
-echo $fake->text(100000);
+echo $fake->text(10000);
 
 
 ?>
