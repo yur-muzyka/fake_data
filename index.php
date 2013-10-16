@@ -7,6 +7,7 @@ class Fake {
     private $dictionary = array();  
     private $last = array();
     private $largest_word;
+    private $result_text;
 
     function __construct() {
         $this->config = new Config();
@@ -102,11 +103,11 @@ class Fake {
         $this->largest_word = $result_key;
     }
 
-            
-
-    function text($count) {  
+    function generate_text($count) {  
         $words = array_keys($this->dictionary);  
-        $text ='';  
+        $paragraph = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+        $text = '';
+        $result_text = $paragraph;  
 
         $first_upper = true;
         while (true) {
@@ -125,9 +126,11 @@ class Fake {
                         $word_append = ' ' . $word;
                     }
                     $text .= $word_append;  
+                    $result_text .= $word_append;  
                     if (strlen($text) >= $count && strlen($word) > 3) {
-                        $text .= ".";
-                        return $text;
+                        $result_text .= "."; 
+                        $this->result_text = $result_text;
+                        return;
                     }
                     if($i == $words_in_sentence - 1 && strlen($word) <= 3) {
                         $i = $i - 1;
@@ -135,11 +138,22 @@ class Fake {
                     $word = $this->dictionary[$word][rand(0,count($this->dictionary[$word])-1)];  
                 }
                 $text .= '. ';
+                $result_text .= '. ';
                 $first_upper = true;
             }
-            $text .= '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+            $result_text .= '<br>' . $paragraph;
         }  
     }  
+
+    function text($count) {
+        $this->generate_text($count);
+        return $this->result_text;
+    }
+
+    function title($count) {
+        $this->generate_text($count);
+        return $this->result_text;
+    }
 }
 
 function first_to_upper($str) {
@@ -154,6 +168,8 @@ function first_to_upper($str) {
 set_time_limit(0);
 $fake = new Fake();
 echo $fake->text(10000);
+echo "<hr>";
+echo $fake->title(50);
 
 
 ?>
