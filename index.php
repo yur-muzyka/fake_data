@@ -103,11 +103,14 @@ class Fake {
         $this->largest_word = $result_key;
     }
 
-    function generate_text($count) {  
+    function generate_text($count, $paragraph = null) {  
         $words = array_keys($this->dictionary);  
-        $paragraph = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
         $text = '';
-        $result_text = $paragraph;  
+        if ($paragraph) {
+            $result_text = $paragraph;  
+        } else {
+            $result_text = '';
+        }
 
         $first_upper = true;
         while (true) {
@@ -141,16 +144,18 @@ class Fake {
                 $result_text .= '. ';
                 $first_upper = true;
             }
-            $result_text .= '<br>' . $paragraph;
+            if ($paragraph) {
+                $result_text .= '<br>' . $paragraph;
+            }
         }  
     }  
 
     function text($count) {
-        $this->generate_text($count);
+        $this->generate_text($count, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;');
         return $this->result_text;
     }
 
-    function title($count) {
+    function solid($count) {
         $this->generate_text($count);
         return $this->result_text;
     }
@@ -169,7 +174,7 @@ set_time_limit(0);
 $fake = new Fake();
 echo $fake->text(10000);
 echo "<hr>";
-echo $fake->title(50);
+echo $fake->solid(10000);
 
 
 ?>
