@@ -159,6 +159,11 @@ class Fake {
         $this->generate_text($count);
         return $this->result_text;
     }
+
+    function title($count) {
+        $res = $this->solid($count);
+        return substr($res, 0, strlen($res) - 1);
+    }
 }
 
 function first_to_upper($str) {
